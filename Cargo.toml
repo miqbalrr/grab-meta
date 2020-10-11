@@ -1,0 +1,17 @@
+[package]
+name = "grab-meta"
+version = "0.1.0"
+authors = ["miqbalrr <iqb4lcakep@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wasm-bindgen = "0.2.68"
+tokio = { version = "0.2", features = ["full"] }
+reqwest = "*"
+select = "*"
+scraper = "*"
+serde = "1.0.116"
+serde_json = "1.0.58"
+serde_derive = "1.0.116"
