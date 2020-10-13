@@ -1,3 +1,5 @@
+mod site;
+
 #[cfg(test)]
 mod tests {
     #[test]
