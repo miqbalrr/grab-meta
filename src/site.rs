@@ -17,13 +17,15 @@ pub struct Site{
 * interface fo website
 */
 pub trait Website{
-    fn get_content(&mut self) -> Result<Self, meta_error::MetaError> where Self: std::marker::Sized;
-    fn check_type(&mut self) -> Result<Self, meta_error::MetaError> where Self: std::marker::Sized;
+    fn get_content(&mut self) -> Result<(), meta_error::MetaError>;
+    fn check_type(&mut self) -> Result<(), meta_error::MetaError>;
 }
 
 /*
 * implement site for generete new
 */
+#[allow(dead_code)]
+// replacing site meta_type
 fn is_sosmed_site(url: &str) -> (meta::MetaType, bool) {
     if url.contains("facebook.com") {
         (meta::MetaType::Facebook, true)
@@ -34,7 +36,8 @@ fn is_sosmed_site(url: &str) -> (meta::MetaType, bool) {
     }
 }
 
-impl Site<>{
+impl Site{
+    #[allow(dead_code)]
     pub fn new(url: &'static str) -> Self {
         let check_url = is_sosmed_site(url);
         Site {url, content: String::new(), meta_type: check_url.0, is_sosmed: check_url.1}
@@ -44,18 +47,29 @@ impl Site<>{
 impl Website for Site{
 
     /*
+    * Get content
     * MetaError contains Request Error for reqwest
-    * String result is html content
+    * update self content
     */
     #[tokio::main]
-    async fn get_content(&mut self) -> Result<Self, meta_error::MetaError> {
+    async fn get_content(&mut self) -> Result<(), meta_error::MetaError> {
        let client = reqwest::Client::new();
        let res = client.get(self.url).send().await?.text().await?;
-       Ok(Self{url: self.url, content: res, meta_type: meta::MetaType::Og, is_sosmed: self.is_sosmed})
+       self.content = res;
+       Ok(())
     }
 
-    fn check_type(&mut self) -> Result<Self, meta_error::MetaError> {
-        Ok(Self{url: self.url, content: self.content.clone(), meta_type: meta::MetaType::Og, is_sosmed: self.is_sosmed})
+    /*
+    *
+    * Check Type
+    * update self meta_type
+    */
+    fn check_type(&mut self) -> Result<(), meta_error::MetaError> {
+        if self.meta_type == meta::MetaType::Facebook || self.meta_type == meta::MetaType::Twitter {
+           return Ok(()) 
+        }
+        self.content = String::from("hello");
+        Ok(())
     }
 }
 
@@ -66,17 +80,19 @@ mod tests {
     fn get_content() {
         // i test with mozilla site just for the content 
         let mut site = Site::new("http://detectportal.firefox.com/success.txt");
-        let site = site.get_content().expect("error");
+        site.get_content().expect("error");
         assert_eq!("success\n", site.content)
     }
 
     #[test]
-    fn check_type() { // meta should type facebook or twitter
-        let site = Site::new("https:://facebook.com");
-        assert_eq!(meta::MetaType::Facebook, site.meta_type);
+    fn check_type() { 
+        // meta should type facebook or twitter
+        let mut site1 = Site::new("https:://facebook.com");
+        site1.check_type().expect("error");
+        assert_eq!(meta::MetaType::Facebook, site1.meta_type);
 
-        let site = Site::new("https:://twitter.com");
-        assert_eq!(meta::MetaType::Twitter, site.meta_type)
-
+        let mut site2 = Site::new("https:://twitter.com");
+        site2.check_type().expect("error");
+        assert_eq!(meta::MetaType::Twitter, site2.meta_type)
     }
 }
