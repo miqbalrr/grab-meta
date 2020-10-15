@@ -1,4 +1,6 @@
+mod meta_error;
 mod site;
+mod meta;
 
 #[cfg(test)]
 mod tests {
