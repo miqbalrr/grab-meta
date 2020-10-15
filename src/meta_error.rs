@@ -13,6 +13,6 @@ impl From<serde_json::Error> for MetaError {
 
 impl From<reqwest::Error> for MetaError {
     fn from(e: reqwest::Error) -> Self {
-        Self::ParseError(e)
+        Self::RequestError(e)
     }
 }
