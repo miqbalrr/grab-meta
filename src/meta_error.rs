@@ -3,23 +3,23 @@
 pub enum MetaError {
     RequestError(reqwest::Error),
     ParseError(serde_json::Error),
-    SomeError(String),
+    SomeError(&'static str),
 }
 
 impl From<serde_json::Error> for MetaError {
     fn from(e: serde_json::Error) -> Self {
-        Self::ParseError(e)
+        MetaError::ParseError(e)
     }
 }
 
 impl From<reqwest::Error> for MetaError {
     fn from(e: reqwest::Error) -> Self {
-        Self::RequestError(e)
+        MetaError::RequestError(e)
     }
 }
 
-impl From<String> for MetaError {
-    fn from(e: String) -> Self {
-        Self::SomeError(e)
+impl From<&'static str> for MetaError {
+    fn from(e: &'static str) -> Self {
+        MetaError::SomeError(e)
     }
 }
