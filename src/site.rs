@@ -1,6 +1,8 @@
 use crate::meta_error;
 use crate::meta;
 use reqwest;
+use select::document::Document;
+use select::predicate::{Attr, Class, Name};
 
 /*
 * site here is only has url property
@@ -16,7 +18,7 @@ pub struct Site{
 /*
 * interface fo website
 */
-pub trait Website{
+trait Website{
     fn get_content(&mut self) -> Result<(), meta_error::MetaError>;
     fn check_type(&mut self) -> Result<(), meta_error::MetaError>;
 }
@@ -31,8 +33,10 @@ fn is_sosmed_site(url: &str) -> (meta::MetaType, bool) {
         (meta::MetaType::Facebook, true)
     } else if url.contains("twitter.com") {
         (meta::MetaType::Twitter, true)
+    } else if url.contains("instagram.com") {
+        (meta::MetaType::Instagram, true)
     } else {
-        (meta::MetaType::Og, false)
+        (meta::MetaType::Og("og:title".to_string()), false)
     }
 }
 
@@ -65,10 +69,33 @@ impl Website for Site{
     * update self meta_type
     */
     fn check_type(&mut self) -> Result<(), meta_error::MetaError> {
-        if self.meta_type == meta::MetaType::Facebook || self.meta_type == meta::MetaType::Twitter {
+        if self.meta_type == meta::MetaType::Facebook || 
+        self.meta_type == meta::MetaType::Twitter || self.meta_type == meta::MetaType::Instagram {
            return Ok(()) 
         }
-        self.content = String::from("hello");
+        self.get_content();
+        let doc = Document::from(self.content.as_str());
+
+        for my_type in self.meta_type.clone().into_iter() {
+            match my_type {
+                meta::MetaType::Og(attr) => {
+                   if doc.find(Attr("property", attr.as_str())).count() > 0 {
+                       self.meta_type = meta::MetaType::Og(attr);
+                       return Ok(()) 
+                   }
+                },
+                meta::MetaType::Tw(attr) => {
+                    if doc.find(Attr("name", attr.as_str())).count() > 0 {
+                        self.meta_type = meta::MetaType::Tw(attr);
+                        return Ok(()) 
+                    }
+                },
+                _ => {
+                    self.meta_type = meta::MetaType::Manual("title".to_string());
+                    return Ok(()) 
+                },
+            };
+        }
         Ok(())
     }
 }
@@ -87,12 +114,24 @@ mod tests {
     #[test]
     fn check_type() { 
         // meta should type facebook or twitter
-        let mut site1 = Site::new("https:://facebook.com");
+        let mut site1 = Site::new("https://facebook.com");
         site1.check_type().expect("error");
         assert_eq!(meta::MetaType::Facebook, site1.meta_type);
 
         let mut site2 = Site::new("https:://twitter.com");
         site2.check_type().expect("error");
-        assert_eq!(meta::MetaType::Twitter, site2.meta_type)
+        assert_eq!(meta::MetaType::Twitter, site2.meta_type);
+
+        let mut site2 = Site::new("https:://instagram.com");
+        site2.check_type().expect("error");
+        assert_eq!(meta::MetaType::Instagram, site2.meta_type)
+    }
+
+    #[test]
+    fn check_type_manual() {
+        let mut site = Site::new("http://iqbalcakep.com");
+        site.get_content();
+        site.check_type().expect("error");
+        assert_eq!(meta::MetaType::Manual("title".to_string()), site.meta_type)
     }
 }
