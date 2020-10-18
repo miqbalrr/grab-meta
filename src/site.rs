@@ -2,24 +2,24 @@ use crate::meta_error;
 use crate::meta;
 use reqwest;
 use select::document::Document;
-use select::predicate::{Attr, Class, Name};
+use select::predicate::{Attr, Name};
 
 /*
 * site here is only has url property
 */
 #[derive(Clone)]
 pub struct Site{
-    url: &'static str,
-    content: String,
-    meta_type: meta::MetaType,
-    is_sosmed: bool
+    pub url: &'static str,
+    pub content: String,
+    pub meta_type: meta::MetaType,
+    pub is_sosmed: bool
 }
 
 /*
 * interface fo website
 */
-trait Website{
-    fn get_content(&mut self) -> Result<(), meta_error::MetaError>;
+pub trait Website{
+    fn get_html(&mut self) -> Result<(), meta_error::MetaError>;
     fn check_type(&mut self) -> Result<(), meta_error::MetaError>;
 }
 
@@ -36,7 +36,7 @@ fn is_sosmed_site(url: &str) -> (meta::MetaType, bool) {
     } else if url.contains("instagram.com") {
         (meta::MetaType::Instagram, true)
     } else {
-        (meta::MetaType::Og("og:title".to_string()), false)
+        (meta::MetaType::Og, false)
     }
 }
 
@@ -56,11 +56,14 @@ impl Website for Site{
     * update self content
     */
     #[tokio::main]
-    async fn get_content(&mut self) -> Result<(), meta_error::MetaError> {
+    async fn get_html(&mut self) -> Result<(), meta_error::MetaError> {
        let client = reqwest::Client::new();
        let res = client.get(self.url).send().await?.text().await?;
-       self.content = res;
-       Ok(())
+       if !res.trim().is_empty(){
+        self.content = res;
+        return Ok(())
+       } 
+       Err(meta_error::MetaError::SomeError("Somehow error request"))
     }
 
     /*
@@ -69,45 +72,89 @@ impl Website for Site{
     * update self meta_type
     */
     fn check_type(&mut self) -> Result<(), meta_error::MetaError> {
-        if self.meta_type == meta::MetaType::Facebook || 
-        self.meta_type == meta::MetaType::Twitter || self.meta_type == meta::MetaType::Instagram {
-           return Ok(()) 
+        self.get_html()?;
+        if self.is_sosmed {
+            return Ok(())
         }
-        self.get_content();
         let doc = Document::from(self.content.as_str());
 
-        for my_type in self.meta_type.clone().into_iter() {
-            match my_type {
-                meta::MetaType::Og(attr) => {
-                   if doc.find(Attr("property", attr.as_str())).count() > 0 {
-                       self.meta_type = meta::MetaType::Og(attr);
+        for my_type in meta::MetaType::Og.into_iter() {
+           match my_type {
+                meta::MetaType::Og => {
+                   if doc.find(Attr("property","og:title")).count() > 0 {
+                       self.meta_type = meta::MetaType::Og;
                        return Ok(()) 
                    }
                 },
-                meta::MetaType::Tw(attr) => {
-                    if doc.find(Attr("name", attr.as_str())).count() > 0 {
-                        self.meta_type = meta::MetaType::Tw(attr);
+                meta::MetaType::Tw => {
+                    if doc.find(Attr("name", "twitter:title")).count() > 0 {
+                        self.meta_type = meta::MetaType::Tw;
                         return Ok(()) 
                     }
                 },
                 _ => {
-                    self.meta_type = meta::MetaType::Manual("title".to_string());
+                    self.meta_type = meta::MetaType::Manual;
                     return Ok(()) 
                 },
             };
         }
-        Ok(())
+        Err(meta_error::MetaError::SomeError("no type"))
     }
+}
+
+/*
+*
+* Find meta with OG type
+* params = doc type Document
+*/
+pub fn find_og_meta(doc: &Document) -> Option<meta::Meta> {
+    let title: String = doc.find(Attr("property","og:title")).filter_map(|x| x.attr("content")).collect();
+    let description: String = doc.find(Attr("property","og:description")).filter_map(|x| x.attr("content")).collect();
+    let thumbnail: String = doc.find(Attr("property","og:image")).filter_map(|x| x.attr("content")).collect();
+    let meta = meta::Meta::new(title.as_ref(), description.as_ref(), thumbnail.as_ref());
+    Some(meta)
+}
+
+/*
+*
+* Find meta with Tw type
+* params = doc type Document
+*/
+pub fn find_tw_meta(doc: &Document) -> Option<meta::Meta> {
+    let title: String = doc.find(Attr("name","twitter:title")).filter_map(|x| x.attr("content")).collect();
+    let description: String = doc.find(Attr("name","twitter:description")).filter_map(|x| x.attr("content")).collect();
+    let thumbnail: String = doc.find(Attr("name","twitter:image")).filter_map(|x| x.attr("content")).collect();
+    let meta = meta::Meta::new(title.as_ref(), description.as_ref(), thumbnail.as_ref());
+    Some(meta)
+}
+
+/*
+*
+* Find meta with Manual type
+* params = doc type Document
+*/
+pub fn find_manual_meta(doc: &Document) -> Option<meta::Meta> {
+    let title: String = doc.find(Name("title")).next().unwrap().text();
+    let nodedsc = doc.find(Name("p")).next();
+    let thumbnail: String = doc.find(Name("img")).take(1).filter_map(|x| x.attr("src")).collect();
+    let mut description = String::from("No Desc Available");
+    if !nodedsc.is_none() {
+        description = nodedsc?.text();
+    }
+    let meta = meta::Meta::new(title.as_ref(), description.as_ref(), thumbnail.as_ref());
+    Some(meta)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn get_content() {
+    fn get_html_content() {
         // i test with mozilla site just for the content 
         let mut site = Site::new("http://detectportal.firefox.com/success.txt");
-        site.get_content().expect("error");
+        // let mut site = Site::new("https://twitter.com/idtodayco/status/1310591378141847552");
+        // println!("{:?}",site.content);
+        site.get_html().expect("error");
         assert_eq!("success\n", site.content)
     }
 
@@ -118,20 +165,27 @@ mod tests {
         site1.check_type().expect("error");
         assert_eq!(meta::MetaType::Facebook, site1.meta_type);
 
-        let mut site2 = Site::new("https:://twitter.com");
+        let mut site2 = Site::new("https://twitter.com");
         site2.check_type().expect("error");
         assert_eq!(meta::MetaType::Twitter, site2.meta_type);
 
-        let mut site2 = Site::new("https:://instagram.com");
+        let mut site2 = Site::new("https://www.instagram.com/p/CFs2jU5nbTS/");
         site2.check_type().expect("error");
         assert_eq!(meta::MetaType::Instagram, site2.meta_type)
+        // assert_eq!(3, 4)
     }
 
     #[test]
     fn check_type_manual() {
         let mut site = Site::new("http://iqbalcakep.com");
-        site.get_content();
         site.check_type().expect("error");
-        assert_eq!(meta::MetaType::Manual("title".to_string()), site.meta_type)
+        assert_eq!(meta::MetaType::Manual, site.meta_type)
+    }
+
+    #[test]
+    fn check_type_og() {
+        let mut site = Site::new("https://github.com/");
+        site.check_type().expect("error");
+        assert_eq!(meta::MetaType::Og, site.meta_type)
     }
 }
