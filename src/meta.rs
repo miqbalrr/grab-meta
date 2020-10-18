@@ -1,15 +1,16 @@
+#[derive(Debug)]
 pub struct Meta {
-    title: String,
-    description: String,
-    thumbnail: String
+    pub title: String,
+    pub description: String,
+    pub thumbnail: String
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MetaType{
     // for og meta
-    Og(String),
+    Og,
     // for twitter meta
-    Tw(String),
+    Tw,
     // for twitter site
     Twitter,
     // for facebook site
@@ -17,7 +18,7 @@ pub enum MetaType{
     // for ig site / url
     Instagram,
     // for Manual 
-    Manual(String)
+    Manual
 }
 
 #[derive(Debug, Clone)]
@@ -31,9 +32,9 @@ impl Iterator for MetaIterator {
     fn next(&mut self) -> Option<Self::Item> {
         self.next += 1;
         match self.next {
-            1 => Some(MetaType::Og("og:title".to_string())),
-            2 => Some(MetaType::Tw("twitter:title".to_string())),
-            3 => Some(MetaType::Manual("title".to_string())),
+            1 => Some(MetaType::Og),
+            2 => Some(MetaType::Tw),
+            3 => Some(MetaType::Manual),
             _ => None
         }
     }
