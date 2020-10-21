@@ -4,6 +4,7 @@ use reqwest;
 use select::document::Document;
 use select::predicate::{Attr, Name};
 
+
 /*
 * site here is only has url property
 */
@@ -28,7 +29,7 @@ pub trait Website{
 */
 #[allow(dead_code)]
 // replacing site meta_type
-fn is_sosmed_site(url: &str) -> (meta::MetaType, bool) {
+fn is_sosmed_site(url: &'static str) -> (meta::MetaType, bool) {
     if url.contains("facebook.com") {
         (meta::MetaType::Facebook, true)
     } else if url.contains("twitter.com") {
@@ -49,7 +50,6 @@ impl Site{
 }
 
 impl Website for Site{
-
     /*
     * Get content
     * MetaError contains Request Error for reqwest
@@ -58,7 +58,10 @@ impl Website for Site{
     #[tokio::main]
     async fn get_html(&mut self) -> Result<(), meta_error::MetaError> {
        let client = reqwest::Client::new();
-       let res = client.get(self.url).send().await?.text().await?;
+       let res = client
+            .get(self.url)
+            .header("USER_AGENT", "reqwest")
+            .send().await?.text().await?;
        if !res.trim().is_empty(){
         self.content = res;
         return Ok(())
@@ -152,7 +155,7 @@ mod tests {
     fn get_html_content() {
         // i test with mozilla site just for the content 
         let mut site = Site::new("http://detectportal.firefox.com/success.txt");
-        // let mut site = Site::new("https://twitter.com/idtodayco/status/1310591378141847552");
+        // let mut site = Site::new("https://m.facebook.com/story.php?story_fbid=1695480023942518&id=100004416098392&sfnsn=wiwspwa&extid=vGtMhEVlL3ZOL2Nd");
         // println!("{:?}",site.content);
         site.get_html().expect("error");
         assert_eq!("success\n", site.content)

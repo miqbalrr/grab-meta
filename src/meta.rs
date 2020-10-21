@@ -1,4 +1,6 @@
-#[derive(Debug)]
+use serde_derive::{Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Meta {
     pub title: String,
     pub description: String,
