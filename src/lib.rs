@@ -5,7 +5,7 @@ mod meta;
 use select::document::Document;
 use site::{Site, Website, find_manual_meta, find_og_meta, find_tw_meta};
 
-pub fn get_meta(url: &'static str) -> Result<meta::Meta, meta_error::MetaError>{ 
+pub fn get_meta(url: &str) -> Result<meta::Meta, meta_error::MetaError>{ 
     let mut site = Site::new(url);
     site.check_type()?;
     let doc = Document::from(site.content.as_ref());
