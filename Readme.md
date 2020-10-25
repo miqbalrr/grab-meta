@@ -5,7 +5,7 @@ A tool for getting meta data from url
 ## Usage
 add into your cargo.toml
 ```rust
-grab-meta = "0.1.1"
+grab-meta = "0.1.3"
 ```
 ![grab meta testing](https://i.imgur.com/pznwoPE.png)
 

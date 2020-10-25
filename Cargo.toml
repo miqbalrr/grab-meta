@@ -1,6 +1,6 @@
 [package]
 name = "grab-meta"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["miqbalrr <iqb4lcakep@gmail.com>"]
 edition = "2018"
 description = "a single meta scrapper for getting (title, image, description) of an url"

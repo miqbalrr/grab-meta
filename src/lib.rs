@@ -1,6 +1,6 @@
-mod meta_error;
+pub mod meta_error;
 mod site;
-mod meta;
+pub mod meta;
 
 use select::document::Document;
 use site::{Site, Website, find_manual_meta, find_og_meta, find_tw_meta};
