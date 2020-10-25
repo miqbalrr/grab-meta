@@ -1,5 +1,8 @@
 # Grab Meta
 A tool for getting meta data from url
+
+testing: https://iqbalcakep.com/grab-meta?url=https://iqbalcakep.com
+
 #### exlcude twitter site (comming soon)
 
 ## Usage
