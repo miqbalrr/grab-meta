@@ -59,7 +59,7 @@ impl<'a> Website for Site<'a>{
        let client = reqwest::Client::new();
        let res = client
             .get(self.url)
-            .header("USER_AGENT", "reqwest")
+            .header(reqwest::header::USER_AGENT, "reqwest")
             .send().await?.text().await?;
        if !res.trim().is_empty(){
         self.content = res;
